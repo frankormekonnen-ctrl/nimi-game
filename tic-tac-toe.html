@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tic Tac Toe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400;12..96,75..100,600;12..96,75..100,800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --desk: #C7C4B6;
+    --desk-shadow: rgba(25, 26, 46, 0.28);
+    --paper: #EEEEE6;
+    --paper-2: #E1DFD3;
+    --paper-3: #D3D0C1;
+    --ink: #191A2E;
+    --ink-soft: #64667C;
+    --blue: #2B3AC9;
+    --blue-soft: rgba(43, 58, 201, 0.28);
+    --pink: #FF3D9A;
+    --pink-soft: rgba(255, 61, 154, 0.28);
+    --rule: rgba(25, 26, 46, 0.22);
+    --grain: 0.05;
+    --tape: rgba(255, 214, 130, 0.55);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --desk: #0C0D22;
+      --desk-shadow: rgba(0, 0, 0, 0.6);
+      --paper: #1B1D45;
+      --paper-2: #232659;
+      --paper-3: #2B2E68;
+      --ink: #ECECF4;
+      --ink-soft: #9EA1C7;
+      --blue: #7C8AFF;
+      --blue-soft: rgba(124, 138, 255, 0.28);
+      --pink: #FF6BB2;
+      --pink-soft: rgba(255, 107, 178, 0.28);
+      --rule: rgba(236, 236, 244, 0.24);
+      --grain: 0.09;
+      --tape: rgba(255, 214, 130, 0.22);
+    }
+  }
+  :root[data-theme="dark"] {
+    --desk: #0C0D22; --desk-shadow: rgba(0,0,0,0.6);
+    --paper: #1B1D45; --paper-2: #232659; --paper-3: #2B2E68;
+    --ink: #ECECF4; --ink-soft: #9EA1C7;
+    --blue: #7C8AFF; --blue-soft: rgba(124,138,255,0.28);
+    --pink: #FF6BB2; --pink-soft: rgba(255,107,178,0.28);
+    --rule: rgba(236,236,244,0.24); --grain: 0.09; --tape: rgba(255,214,130,0.22);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--desk);
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(255,255,255,0.10), transparent 55%),
+      radial-gradient(ellipse at 85% 100%, rgba(0,0,0,0.08), transparent 50%);
+    color: var(--ink);
+    font-family: "Bricolage Grotesque", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    font-variation-settings: "wdth" 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 18px;
+    overflow-x: hidden;
+  }
+
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; opacity: var(--grain);
+    z-index: 50; mix-blend-mode: multiply;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .grain { mix-blend-mode: screen; } }
+  :root[data-theme="dark"] .grain { mix-blend-mode: screen; }
+
+  .stack { position: relative; width: 100%; max-width: 440px; }
+
+  .sheet {
+    position: absolute; inset: 0; border-radius: 4px;
+    background: var(--paper-2);
+    box-shadow: 0 10px 24px var(--desk-shadow);
+  }
+  .sheet.a { transform: rotate(2.4deg) translate(3px, 6px); background: var(--paper-3); z-index: 1; }
+  .sheet.b { transform: rotate(-1.6deg) translate(-4px, 3px); background: var(--paper-2); z-index: 2; }
+
+  .card {
+    position: relative;
+    z-index: 3;
+    background: var(--paper);
+    border-radius: 4px;
+    padding: 30px 26px 26px;
+    transform: rotate(-0.5deg);
+    box-shadow:
+      0 2px 0 rgba(255,255,255,0.35) inset,
+      0 22px 40px var(--desk-shadow);
+  }
+
+  .tape {
+    position: absolute; width: 78px; height: 26px;
+    background: repeating-linear-gradient(45deg, var(--tape), var(--tape) 5px, rgba(255,255,255,0.15) 5px, rgba(255,255,255,0.15) 10px);
+    opacity: 0.85;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    z-index: 4;
+  }
+  .tape.tl { top: -13px; left: 18px; transform: rotate(-7deg); }
+  .tape.tr { top: -11px; right: 8px; transform: rotate(9deg); }
+
+  .stamp {
+    position: absolute; top: 6px; right: -6px;
+    width: 84px; height: 84px;
+    border: 1.5px dashed var(--pink);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    font-family: "Caveat", cursive;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--pink);
+    transform: rotate(-9deg);
+    line-height: 1.15;
+    padding: 6px;
+    opacity: 0.9;
+  }
+
+  .doodle-star {
+    position: absolute; top: 2px; left: -2px; width: 30px; height: 30px;
+    stroke: var(--blue); stroke-width: 6; fill: none;
+    stroke-linecap: round; opacity: 0.8;
+  }
+
+  .masthead { position: relative; margin: 6px 0 20px; line-height: 0.82; padding-right: 70px; }
+
+  .masthead h1 {
+    margin: 0;
+    font-size: clamp(2.7rem, 15vw, 4rem);
+    font-weight: 800;
+    font-variation-settings: "wdth" 100;
+    letter-spacing: -0.035em;
+    color: var(--blue);
+    position: relative;
+    z-index: 2;
+    filter: drop-shadow(0 0 0.4px var(--blue));
+  }
+  .masthead .ghost {
+    position: absolute; top: 3px; left: 4px; margin: 0;
+    color: var(--pink); z-index: 1; user-select: none;
+    filter: blur(0.4px);
+  }
+
+  .masthead .sub-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .masthead p { margin: 0; font-size: 0.95rem; color: var(--ink-soft); line-height: 1.4; }
+  .squiggle { width: 34px; height: 12px; flex-shrink: 0; }
+  .squiggle path { stroke: var(--ink-soft); stroke-width: 3; fill: none; stroke-linecap: round; }
+
+  .scores { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 18px; }
+
+  .score {
+    background: var(--paper-2);
+    padding: 10px 12px 11px;
+    border-radius: 3px;
+    display: flex; flex-direction: column; gap: 2px;
+    position: relative;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+  }
+  .score .who { font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
+  .score .tally { font-size: 1.7rem; font-weight: 800; font-variation-settings: "wdth" 100; letter-spacing: -0.02em; }
+  .score.x .tally { color: var(--pink); }
+  .score.o .tally { color: var(--blue); }
+  .score.active { box-shadow: inset 0 0 0 2px currentColor, 0 3px 8px rgba(0,0,0,0.12); transform: translateY(-2px) rotate(-0.6deg); }
+  .score.x.active { color: var(--pink); }
+  .score.o.active { color: var(--blue); }
+
+  .board-wrap { position: relative; aspect-ratio: 1; width: 100%; margin-bottom: 18px; }
+
+  .paper-tex { position: absolute; inset: 6%; border-radius: 3px; background: var(--paper-2); opacity: 0.5; }
+
+  .board { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(3,1fr); grid-template-rows: repeat(3,1fr); }
+
+  .cell {
+    appearance: none; background: none; border: 0; margin: 0; padding: 9%;
+    cursor: pointer; border-radius: 3px; color: inherit;
+    display: grid; place-items: center;
+    transition: transform 0.14s ease, background 0.14s ease;
+  }
+  .cell:hover:not(:disabled) { background: rgba(25,26,46,0.035); transform: rotate(-0.6deg); }
+  .cell:disabled { cursor: default; }
+  .cell:focus-visible { outline: 3px solid var(--pink); outline-offset: -5px; }
+  .cell svg { width: 100%; height: 100%; overflow: visible; }
+
+  .mark { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 9; }
+  .mark.x { stroke: var(--pink); }
+  .mark.o { stroke: var(--blue); }
+  .mark .bleed { stroke-width: 15; filter: blur(3px); opacity: 0.35; }
+  .mark.x .bleed { stroke: var(--pink); }
+  .mark.o .bleed { stroke: var(--blue); }
+
+  .mark path.stroke { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.34s cubic-bezier(0.4,0.05,0.2,1) forwards; }
+  .mark path.stroke:nth-of-type(2) { animation-delay: 0.15s; }
+  .mark path.bleed { animation: fadein 0.4s ease forwards; opacity: 0; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes fadein { to { opacity: 0.35; } }
+
+  .cell .preview { opacity: 0; transition: opacity 0.12s ease; }
+  .cell:hover:not(:disabled) .preview, .cell:focus-visible:not(:disabled) .preview { opacity: 0.22; }
+  .cell .preview path { animation: none; stroke-dashoffset: 0; }
+  .cell .preview .bleed { display: none; }
+
+  .grid-lines, .strike, .confetti { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+  .grid-lines path.a { stroke: var(--rule); stroke-width: 3.5; stroke-linecap: round; fill: none; }
+  .grid-lines path.b { stroke: var(--rule); stroke-width: 1.6; stroke-linecap: round; fill: none; opacity: 0.6; }
+
+  .strike path { stroke: var(--ink); stroke-width: 7; stroke-linecap: round; fill: none;
+    stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 0.42s 0.2s cubic-bezier(0.4,0.05,0.2,1) forwards; }
+
+  .confetti { z-index: 20; }
+  .confetti .bit { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; opacity: 0; border-radius: 1px; }
+  .confetti .bit.round { border-radius: 50%; }
+
+  .status { min-height: 1.6em; font-size: 1.2rem; font-weight: 600; letter-spacing: -0.015em; margin: 0 0 16px; }
+  .status .name.x { color: var(--pink); }
+  .status .name.o { color: var(--blue); }
+
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  button.action {
+    font: inherit; font-weight: 600; font-size: 0.95rem;
+    padding: 11px 18px; border-radius: 3px; border: 2px solid var(--ink);
+    background: var(--ink); color: var(--paper); cursor: pointer;
+    transition: transform 0.12s ease;
+  }
+  button.action.quiet { background: none; color: var(--ink); }
+  button.action:hover { transform: translate(-1px, -1px); }
+  button.action:active { transform: translate(1px, 1px); }
+  button.action:focus-visible { outline: 3px solid var(--pink); outline-offset: 2px; }
+
+  .sound-toggle {
+    margin-left: auto;
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1.5px solid var(--rule); background: var(--paper-2);
+    display: grid; place-items: center; cursor: pointer; color: var(--ink-soft);
+    transition: transform 0.12s ease, color 0.12s ease;
+  }
+  .sound-toggle:hover { transform: scale(1.06); color: var(--ink); }
+  .sound-toggle svg { width: 18px; height: 18px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mark path, .strike path, .confetti .bit, .cell { animation: none !important; transition: none !important; }
+  }
+
+  @media (max-width: 360px) {
+    .scores { grid-template-columns: 1fr 1fr; }
+    .score.draw { grid-column: span 2; }
+  }
+</style>
+</head>
+<body>
+
+<svg class="grain" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <filter id="noise">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+    <feColorMatrix type="saturate" values="0"/>
+  </filter>
+  <rect width="100%" height="100%" filter="url(#noise)"/>
+</svg>
+
+<div class="stack">
+  <div class="sheet a"></div>
+  <div class="sheet b"></div>
+
+  <main class="card">
+    <div class="tape tl"></div>
+    <div class="tape tr"></div>
+    <div class="stamp">player's<br>edition</div>
+
+    <header class="masthead">
+      <svg class="doodle-star" viewBox="0 0 30 30" aria-hidden="true">
+        <path d="M15 3 L15 27 M4 9 L26 21 M26 9 L4 21"/>
+      </svg>
+      <h1 class="ghost" aria-hidden="true">Tic&nbsp;Tac<br>Toe</h1>
+      <h1>Tic&nbsp;Tac<br>Toe</h1>
+      <div class="sub-row">
+        <svg class="squiggle" viewBox="0 0 34 12" aria-hidden="true"><path d="M1 8 Q9 2 17 8 T33 6"/></svg>
+        <p>Two players, one screen. Pink goes first.</p>
+      </div>
+    </header>
+
+    <section class="scores" aria-label="Score">
+      <div class="score x" id="score-x">
+        <span class="who">Player X</span>
+        <span class="tally" id="tally-x">0</span>
+      </div>
+      <div class="score o" id="score-o">
+        <span class="who">Player O</span>
+        <span class="tally" id="tally-o">0</span>
+      </div>
+      <div class="score draw">
+        <span class="who">Draws</span>
+        <span class="tally" id="tally-d">0</span>
+      </div>
+    </section>
+
+    <div class="board-wrap">
+      <div class="paper-tex"></div>
+      <svg class="grid-lines" viewBox="0 0 300 300" aria-hidden="true">
+        <path class="a" d="M102 14 Q99 150 101 287"/>
+        <path class="b" d="M106 16 Q103 150 105 285"/>
+        <path class="a" d="M199 12 Q202 148 198 288"/>
+        <path class="b" d="M195 14 Q198 148 194 286"/>
+        <path class="a" d="M13 101 Q150 104 288 99"/>
+        <path class="b" d="M15 106 Q150 109 286 104"/>
+        <path class="a" d="M12 199 Q150 196 287 201"/>
+        <path class="b" d="M14 195 Q150 192 285 197"/>
+      </svg>
+
+      <div class="board" id="board" role="group" aria-label="Tic tac toe board"></div>
+
+      <svg class="strike" id="strike" viewBox="0 0 300 300" aria-hidden="true"></svg>
+      <svg class="confetti" id="confetti" viewBox="0 0 300 300" aria-hidden="true"></svg>
+    </div>
+
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+
+    <div class="controls">
+      <button class="action" id="again">New round</button>
+      <button class="action quiet" id="reset">Reset score</button>
+      <button class="sound-toggle" id="sound" aria-pressed="true" aria-label="Toggle sound">
+        <svg id="sound-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      </button>
+    </div>
+  </main>
+</div>
+
+<script>
+  var WINS = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+  var X_VARIANTS = [
+    ['M22 21 Q50 47 79 80', 'M80 23 Q51 49 21 79'],
+    ['M20 23 Q49 48 78 78', 'M79 20 Q50 50 23 80']
+  ];
+  var O_VARIANTS = [
+    ['M50 15 C73 15 86 33 85 51 C84 70 70 86 50 86 C29 86 14 70 15 50 C16 31 31 16 54 17'],
+    ['M49 14 C72 16 85 34 84 52 C83 71 69 85 49 85 C30 85 16 69 17 49 C18 30 34 15 52 16']
+  ];
+
+  var board = ['', '', '', '', '', '', '', '', ''];
+  var variant = [0,0,0,0,0,0,0,0,0];
+  var turn = 'X';
+  var over = false;
+  var scores = { X: 0, O: 0, D: 0 };
+  var soundOn = true;
+
+  var boardEl = document.getElementById('board');
+  var strikeEl = document.getElementById('strike');
+  var confettiEl = document.getElementById('confetti');
+  var statusEl = document.getElementById('status');
+  var soundIcon = document.getElementById('sound-icon');
+
+  var ICON_ON = '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>';
+  var ICON_OFF = '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M23 9l-6 6"/><path d="M17 9l6 6"/>';
+
+  function paintSoundIcon() { soundIcon.innerHTML = soundOn ? ICON_ON : ICON_OFF; }
+
+  // ---------- tiny synthesized sound effects ----------
+  var actx = null;
+  function ctx() {
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { actx = null; }
+    }
+    return actx;
+  }
+  function tone(freq, start, dur, type, gainPeak) {
+    var a = ctx();
+    if (!a || !soundOn) return;
+    var osc = a.createOscillator();
+    var gain = a.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, a.currentTime + start);
+    gain.gain.linearRampToValueAtTime(gainPeak || 0.08, a.currentTime + start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + start + dur);
+    osc.connect(gain).connect(a.destination);
+    osc.start(a.currentTime + start);
+    osc.stop(a.currentTime + start + dur + 0.02);
+  }
+  function playPlace(player) {
+    tone(player === 'X' ? 520 : 340, 0, 0.09, 'triangle', 0.06);
+  }
+  function playWin() {
+    tone(523, 0, 0.14, 'sine', 0.07);
+    tone(659, 0.11, 0.14, 'sine', 0.07);
+    tone(784, 0.22, 0.22, 'sine', 0.08);
+  }
+  function playDraw() {
+    tone(300, 0, 0.18, 'sine', 0.05);
+    tone(220, 0.14, 0.22, 'sine', 0.05);
+  }
+
+  function markSVG(player, preview, v) {
+    var variants = player === 'X' ? X_VARIANTS : O_VARIANTS;
+    var paths = variants[v % variants.length];
+    var cls = 'mark ' + player.toLowerCase() + (preview ? ' preview' : '');
+    var bleed = '', strokes = '';
+    for (var i = 0; i < paths.length; i++) {
+      bleed += '<path class="bleed" pathLength="1" d="' + paths[i] + '"/>';
+      strokes += '<path class="stroke" pathLength="1" d="' + paths[i] + '"/>';
+    }
+    return '<svg viewBox="0 0 100 100" class="' + cls + '" aria-hidden="true">' + bleed + strokes + '</svg>';
+  }
+
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    for (var i = 0; i < 9; i++) {
+      var b = document.createElement('button');
+      b.className = 'cell';
+      b.dataset.index = i;
+      boardEl.appendChild(b);
+    }
+  }
+
+  function render() {
+    var cells = boardEl.children;
+    for (var i = 0; i < 9; i++) {
+      var cell = cells[i];
+      var val = board[i];
+      if (val) {
+        if (cell.dataset.drawn !== val) {
+          cell.innerHTML = markSVG(val, false, variant[i]);
+          cell.dataset.drawn = val;
+        }
+        cell.disabled = true;
+        cell.setAttribute('aria-label', 'Square ' + (i + 1) + ': ' + val);
+      } else {
+        if (cell.dataset.drawn !== 'preview-' + turn) {
+          cell.innerHTML = over ? '' : markSVG(turn, true, 0);
+          cell.dataset.drawn = over ? '' : 'preview-' + turn;
+        }
+        cell.disabled = over;
+        cell.setAttribute('aria-label', 'Square ' + (i + 1) + ': empty');
+      }
+    }
+    document.getElementById('score-x').classList.toggle('active', !over && turn === 'X');
+    document.getElementById('score-o').classList.toggle('active', !over && turn === 'O');
+  }
+
+  function say(html) { statusEl.innerHTML = html; }
+  function nameTag(p) { return '<span class="name ' + p.toLowerCase() + '">Player ' + p + '</span>'; }
+
+  function winningLine(player) {
+    for (var i = 0; i < WINS.length; i++) {
+      var w = WINS[i];
+      if (board[w[0]] === player && board[w[1]] === player && board[w[2]] === player) return w;
+    }
+    return null;
+  }
+  function isFull() { for (var i = 0; i < 9; i++) { if (!board[i]) return false; } return true; }
+  function centre(index) { return { x: 50 + (index % 3) * 100, y: 50 + Math.floor(index / 3) * 100 }; }
+
+  function drawStrike(line) {
+    var a = centre(line[0]), b = centre(line[2]);
+    var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx*dx + dy*dy);
+    var ux = dx/len, uy = dy/len, over1 = 26;
+    var x1 = a.x - ux*over1, y1 = a.y - uy*over1;
+    var x2 = b.x + ux*over1, y2 = b.y + uy*over1;
+    var mx = (x1+x2)/2 - uy*7, my = (y1+y2)/2 + ux*7;
+    strikeEl.innerHTML = '<path pathLength="1" d="M' + x1 + ' ' + y1 + ' Q' + mx + ' ' + my + ' ' + x2 + ' ' + y2 + '"/>';
+  }
+
+  function burstConfetti() {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    confettiEl.innerHTML = '';
+    if (reduce) return;
+    var colors = ['var(--pink)', 'var(--blue)', 'var(--ink)'];
+    var n = 22;
+    for (var i = 0; i < n; i++) {
+      var el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      var angle = Math.random() * Math.PI * 2;
+      var dist = 60 + Math.random() * 110;
+      var ex = 150 + Math.cos(angle) * dist;
+      var ey = 150 + Math.sin(angle) * dist - 40;
+      var size = 5 + Math.random() * 6;
+      var rot = Math.random() * 360;
+      var color = colors[i % colors.length];
+      var round = Math.random() > 0.5;
+      el.setAttribute('x', -size/2); el.setAttribute('y', -size/2);
+      el.setAttribute('width', size); el.setAttribute('height', size);
+      if (round) el.setAttribute('rx', size/2);
+      el.setAttribute('fill', color === 'var(--ink)' ? getComputedStyle(document.documentElement).getPropertyValue('--ink') : getComputedStyle(document.documentElement).getPropertyValue(color.slice(4,-1)));
+      el.style.transformOrigin = '150px 150px';
+      el.style.transform = 'translate(150px,150px) rotate(0deg)';
+      el.style.opacity = '0';
+      el.style.transition = 'transform 0.7s cubic-bezier(.2,.7,.3,1), opacity 0.7s ease';
+      confettiEl.appendChild(el);
+      (function (el, ex, ey, rot) {
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () {
+            el.style.opacity = '1';
+            el.style.transform = 'translate(' + ex + 'px,' + ey + 'px) rotate(' + rot + 'deg)';
+          });
+        });
+        setTimeout(function () { el.style.opacity = '0'; }, 650);
+      })(el, ex, ey, rot);
+    }
+    setTimeout(function () { confettiEl.innerHTML = ''; }, 1500);
+  }
+
+  function saveScores() { try { localStorage.setItem('ttt:scores', JSON.stringify(scores)); } catch (e) {} }
+  function loadScores() {
+    try {
+      var raw = localStorage.getItem('ttt:scores');
+      if (raw) { var p = JSON.parse(raw); if (p && typeof p.X === 'number') scores = p; }
+    } catch (e) {}
+  }
+  function saveSound() { try { localStorage.setItem('ttt:sound', soundOn ? '1' : '0'); } catch (e) {} }
+  function loadSound() {
+    try { var v = localStorage.getItem('ttt:sound'); if (v === '0') soundOn = false; } catch (e) {}
+  }
+  function showScores() {
+    document.getElementById('tally-x').textContent = scores.X;
+    document.getElementById('tally-o').textContent = scores.O;
+    document.getElementById('tally-d').textContent = scores.D;
+  }
+
+  function play(index) {
+    if (over || board[index]) return;
+    board[index] = turn;
+    variant[index] = Math.random() > 0.5 ? 1 : 0;
+    playPlace(turn);
+
+    var line = winningLine(turn);
+    if (line) {
+      over = true;
+      scores[turn]++;
+      saveScores(); showScores();
+      drawStrike(line);
+      say(nameTag(turn) + ' wins it.');
+      playWin();
+      burstConfetti();
+    } else if (isFull()) {
+      over = true;
+      scores.D++;
+      saveScores(); showScores();
+      say('Dead heat. Nobody wins.');
+      playDraw();
+    } else {
+      turn = turn === 'X' ? 'O' : 'X';
+      say(nameTag(turn) + ' to play.');
+    }
+    render();
+  }
+
+  function newRound(starter) {
+    board = ['', '', '', '', '', '', '', '', ''];
+    variant = [0,0,0,0,0,0,0,0,0];
+    over = false;
+    turn = starter;
+    strikeEl.innerHTML = '';
+    confettiEl.innerHTML = '';
+    var cells = boardEl.children;
+    for (var i = 0; i < 9; i++) { cells[i].dataset.drawn = ''; }
+    say(nameTag(turn) + ' to play.');
+    render();
+  }
+
+  boardEl.addEventListener('click', function (e) {
+    var cell = e.target.closest('.cell');
+    if (cell) play(Number(cell.dataset.index));
+  });
+  document.getElementById('again').addEventListener('click', function () { newRound(turn === 'X' ? 'O' : 'X'); });
+  document.getElementById('reset').addEventListener('click', function () {
+    scores = { X: 0, O: 0, D: 0 }; saveScores(); showScores(); newRound('X');
+  });
+  document.getElementById('sound').addEventListener('click', function () {
+    soundOn = !soundOn;
+    this.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
+    paintSoundIcon(); saveSound();
+    if (soundOn) tone(440, 0, 0.06, 'triangle', 0.05);
+  });
+
+  buildBoard();
+  loadScores(); showScores();
+  loadSound(); paintSoundIcon();
+  newRound('X');
+</script>
+</body>
+</html>
